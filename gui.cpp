@@ -72,6 +72,14 @@ void GUI::renderGUI(float &clockSpeed) {
     SDL_RenderPresent(renderer);
 }
 
+// Converts c from hexadecimal to int
+int hexToInt(char c) {
+    if (c >= 'A') {
+        return c - 'A' + 10;
+    }
+    return c - '0';
+}
+
 inline void GUI::createWidgets(float &clockSpeed) {
     const int WINDOW_WIDTH = io->DisplaySize.x;
     const int WINDOW_HEIGHT = io->DisplaySize.y;
@@ -165,7 +173,7 @@ inline void GUI::createWidgets(float &clockSpeed) {
             ImGui::Text(""); // Newline
             ImGui::Text(""); // Newline
 
-            ImGui::PushStyleColor(ImGuiCol_Text, TEXT_LABEL_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_Text, GREEN_COLOR);
             ImGui::Text("PC:");
             ImGui::SameLine();
             ImGui::PopStyleColor();
@@ -179,7 +187,7 @@ inline void GUI::createWidgets(float &clockSpeed) {
             ImGui::PopStyleColor();
             ImGui::Text("%d", chip8->getDelayTimer());
 
-            ImGui::PushStyleColor(ImGuiCol_Text, TEXT_LABEL_COLOR);
+            ImGui::PushStyleColor(ImGuiCol_Text, YELLOW_COLOR);
             ImGui::Text("I:");
             ImGui::SameLine();
             ImGui::PopStyleColor();
@@ -334,7 +342,7 @@ inline void GUI::createWidgets(float &clockSpeed) {
 
             for (int i = 0; i < 16; i++) {
                 // Push color if key pressed
-                if (chip8->getKey(i)) {
+                if (chip8->getKey(hexToInt(chip8->chip8Keys[i]))) {
                     ImGui::PushStyleColor(ImGuiCol_Text, GREEN_COLOR);  
                 }
                 // If character is not last char in line
@@ -349,7 +357,7 @@ inline void GUI::createWidgets(float &clockSpeed) {
                     ImGui::SetCursorPosX(((DISPLAY_WIDTH - GENERAL_WIDTH) - textWidth) * 0.5f);
                 }
                 // Pop color if key was pressed
-                if (chip8->getKey(i)) {
+                if (chip8->getKey(hexToInt(chip8->chip8Keys[i]))) {
                     ImGui::PopStyleColor();  
                 }
             }

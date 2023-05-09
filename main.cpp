@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
         GUI gui(&chip8);
 
         chip8.initializeInput();
-        chip8.loadGame("roms/pong2.rom");
+        chip8.loadGame("roms/keypad.rom");
 
         const float timersCycleDuration = 1000 / 60; // 60 Hz timers
         float clockSpeed = 500; // Clock speed in Hertz

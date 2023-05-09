@@ -70,7 +70,6 @@ void Chip8::initializeInput() {
 void Chip8::emulateCycle() {
     static unsigned short opcode;
     if (pausedForKeyPress) {
-        std::cout << "WAITING" << std::endl;
         setKeys((opcode & 0x0F00) >> 8); // Update key binds
         return;
     }
@@ -195,12 +194,12 @@ void Chip8::emulateCycle() {
         case 0xE000:
             switch (opcode & 0x000F) {
                 case 0xE: // 0xEx9E: Skip next instruction if key with value Vx is pressed
-                    if (keys[inverseChip8Keys[registers[(opcode & 0x0F00) >> 8]]]) {
+                    if (keys[registers[(opcode & 0x0F00) >> 8]]) {
                         programCounter += 2;
                     }
                     break;
                 case 0x1: // 0xExA1: Skip next instruction if key with value Vx is not pressed.
-                    if (!keys[inverseChip8Keys[registers[(opcode & 0x0F00) >> 8]]]) {
+                    if (!keys[registers[(opcode & 0x0F00) >> 8]]) {
                         programCounter += 2;
                     }
                     break;
@@ -213,7 +212,6 @@ void Chip8::emulateCycle() {
                     break;
                 case 0x0A: // 0xFx0A: Wait for a key press, store the value of the key in Vx
                     pausedForKeyPress = true;
-                    std::cout << "ACTIVATED" << std::endl;
                     break;
                 case 0x15: // 0xFx15: Set delay timer = Vx
                     delayTimer = registers[(opcode & 0x0F00) >> 8];
@@ -255,15 +253,6 @@ void Chip8::clearScreen() {
     }
 }
 
-int hexToInt(char c) {
-    if (c >= 'A') {
-        return c - 'A' + 10;
-    }
-    else {
-        return c - '0';
-    }
-}
-
 void Chip8::setKeys(int registerIndex) {
     const unsigned char *keyState = SDL_GetKeyboardState(NULL);
     if (keyState == nullptr) {
@@ -273,16 +262,17 @@ void Chip8::setKeys(int registerIndex) {
     for (int i = 0; i < 16; i++) {
         if (keyState[keybinds[i]]) {
             keys[i] = true;
-            if (pausedForKeyPress) {
-                std::cout << hexToInt(chip8Keys[i]) << std::endl;
-                registers[registerIndex] = hexToInt(chip8Keys[i]);
-                pausedForKeyPress = false;
-            }
         }
         else {
             keys[i] = false;
+            if (pausedForKeyPress && prevKeys[i]) {
+                registers[registerIndex] = i;
+                pausedForKeyPress = false;
+            }
         }
+        prevKeys[i] = keys[i]; // Update previous keys
     }
+
 }
 
 void Chip8::updateTimers() {
