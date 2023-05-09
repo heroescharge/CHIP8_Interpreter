@@ -7,7 +7,7 @@
       "request": "launch",
       "args": [],
       "cwd": "/Users/ishir/Documents/GitHub/CHIP8_Interpreter",
-      "program": "/Users/ishir/Documents/GitHub/CHIP8_Interpreter/build/Debug/outDebug"
+      "program": "/Users/ishir/Documents/GitHub/CHIP8_Interpreter/build/chip8"
     }
   ]
 }

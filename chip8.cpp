@@ -43,20 +43,20 @@ Chip8::Chip8() {
 }
 
 Chip8::~Chip8() {
-    SDL_DestroyWindow(window);
-    SDL_DestroyRenderer(renderer);
+    
 }
 
 void Chip8::loadGame(std::string fileName) {
-    std::ifstream fin(fileName);
+    std::ifstream fin(fileName, std::ios::binary);
     if (!fin.is_open()) {
         throw Chip8::InitializationError("Unable to open game file");
     }
 
     unsigned char nextCode;
     int counter = 0;
-    while (fin >> nextCode) {
+    while (fin >> std::noskipws >> nextCode) {
         memory[counter + PROGRAM_START_ADDRESS] = nextCode;
+        printf("%02X", nextCode);
         counter++;
     }
 
@@ -68,10 +68,15 @@ void Chip8::initializeInput() {
 }
 
 void Chip8::emulateCycle() {
-    unsigned short opcode = memory[programCounter] << 8 | memory[programCounter + 1];
-    programCounter += 2;
+    static unsigned short opcode;
+    if (pausedForKeyPress) {
+        std::cout << "WAITING" << std::endl;
+        setKeys((opcode & 0x0F00) >> 8); // Update key binds
+        return;
+    }
 
-    currentOpcode = opcode;
+    opcode = memory[programCounter] << 8 | memory[programCounter + 1];
+    programCounter += 2;
 
     int x, y, n; // Used to store (x, y) coords for drawing commands, and the size of sprite in n
     unsigned short sum; // Used to store sums for some cases
@@ -133,7 +138,7 @@ void Chip8::emulateCycle() {
                 case 0x4: // 0x8xy4: Set Vx = Vx + Vy, and VF = carry
                     sum = registers[(opcode & 0x0F00) >> 8] + registers[(opcode & 0x00F0) >> 4];
                     registers[(opcode & 0x0F00) >> 8] = sum & 0x00FF;
-                    registers[0xF] = (sum) > 0x00FF ? 1 : 0;
+                    registers[0xF] = (sum > 0x00FF) ? 1 : 0;
                     break;
                 case 0x5: // 0x8xy5: Set Vx = Vx - Vy, and VF = NOT borrow
                     difference = registers[(opcode & 0x0F00) >> 8] - registers[(opcode & 0x00F0) >> 4];
@@ -144,14 +149,14 @@ void Chip8::emulateCycle() {
                     registers[0xF] = ((registers[(opcode & 0x0F00) >> 8] & 0x01) == 1) ? 1 : 0;
                     registers[(opcode & 0x0F00) >> 8] >>= 1;
                     break;
-                case 0x7: // 0x8xy7: Set Vx - Vy - Vx, and VF = NOT borrow
+                case 0x7: // 0x8xy7: Set Vx = Vy - Vx, and VF = NOT borrow
                     difference = registers[(opcode & 0x00F0) >> 4] - registers[(opcode & 0x0F00) >> 8];
                     registers[(opcode & 0x0F00) >> 8] = (unsigned char) difference;
-                    registers[0xF] = difference > 0 ? 1 : 0;
+                    registers[0xF] = (difference > 0) ? 1 : 0;
                     break;
                 case 0xE: // 0x8xyE: If MSb of Vx is 1, Set VF = 1; Set Vx = Vx << 1
                     registers[0xF] = ((registers[(opcode & 0x0F00) >> 8] & 0x80) == 0x80) ? 1 : 0;
-                    registers[(opcode & 0x0F00) >> 8] >>= 1;
+                    registers[(opcode & 0x0F00) >> 8] <<= 1;
                     break;
             }
             break;
@@ -190,12 +195,12 @@ void Chip8::emulateCycle() {
         case 0xE000:
             switch (opcode & 0x000F) {
                 case 0xE: // 0xEx9E: Skip next instruction if key with value Vx is pressed
-                    if (keys[(opcode & 0x0F00) >> 8]) {
+                    if (keys[inverseChip8Keys[registers[(opcode & 0x0F00) >> 8]]]) {
                         programCounter += 2;
                     }
                     break;
                 case 0x1: // 0xExA1: Skip next instruction if key with value Vx is not pressed.
-                    if (!keys[(opcode & 0x0F00) >> 8]) {
+                    if (!keys[inverseChip8Keys[registers[(opcode & 0x0F00) >> 8]]]) {
                         programCounter += 2;
                     }
                     break;
@@ -207,11 +212,8 @@ void Chip8::emulateCycle() {
                     registers[(opcode & 0x0F00) >> 8] = delayTimer;
                     break;
                 case 0x0A: // 0xFx0A: Wait for a key press, store the value of the key in Vx
-                    /* 
-                    
-                        NEED TO IMPLEMENT
-                    
-                    */
+                    pausedForKeyPress = true;
+                    std::cout << "ACTIVATED" << std::endl;
                     break;
                 case 0x15: // 0xFx15: Set delay timer = Vx
                     delayTimer = registers[(opcode & 0x0F00) >> 8];
@@ -242,9 +244,9 @@ void Chip8::emulateCycle() {
                     break;
             }
             break;
-
-        setKeys(); // Update key binds
     }
+
+    setKeys((opcode & 0x0F00) >> 8); // Update key binds
 }
 
 void Chip8::clearScreen() {
@@ -253,8 +255,56 @@ void Chip8::clearScreen() {
     }
 }
 
-void Chip8::setKeys() {
+int hexToInt(char c) {
+    if (c >= 'A') {
+        return c - 'A' + 10;
+    }
+    else {
+        return c - '0';
+    }
+}
 
+void Chip8::setKeys(int registerIndex) {
+    const unsigned char *keyState = SDL_GetKeyboardState(NULL);
+    if (keyState == nullptr) {
+        return;
+    }
+
+    for (int i = 0; i < 16; i++) {
+        if (keyState[keybinds[i]]) {
+            keys[i] = true;
+            if (pausedForKeyPress) {
+                std::cout << hexToInt(chip8Keys[i]) << std::endl;
+                registers[registerIndex] = hexToInt(chip8Keys[i]);
+                pausedForKeyPress = false;
+            }
+        }
+        else {
+            keys[i] = false;
+        }
+    }
+}
+
+void Chip8::updateTimers() {
+    if (soundTimer > 0) {
+        // PLAY SOUND
+        soundTimer--;
+    }
+    if (delayTimer > 0) {
+        delayTimer--;
+    }
+}
+
+bool Chip8::isPaused() {
+    return paused;
+}
+
+void Chip8::togglePaused() {
+    paused = !paused;
+}
+
+bool Chip8::isPausedForKeyPress() {
+    return pausedForKeyPress;
 }
 
 // Getters for chip8
@@ -289,6 +339,4 @@ unsigned short Chip8::getProgramCounter() {
 unsigned char Chip8::getStackPointer() {
     return stackPointer;
 }
-unsigned short Chip8::getCurrentOpcode() {
-    return currentOpcode;
-}
+

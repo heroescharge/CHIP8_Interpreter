@@ -33,17 +33,39 @@ private:
     unsigned short soundTimer = 0;
     // Stores state of key input: keys are 0x0 to 0xF
     unsigned char keys[16] = {};
+    // Stores keybinds of user's system that correspond to CHIP-8 keys: in order of left to right, top to bottom
+    // Order: 1, 2, 3, C, 4, 5, 6, D, 7, 8, 9, E, A, 0, B, F
+    SDL_Scancode keybinds[16] = {
+        SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
+        SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
+        SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
+        SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V,
+    };
     // Stack to store addresses that interpreter should interpret when finished w/ subroutine
     unsigned short stack[16] = {};
     // Stack pointer to point to top of stack (points to one element above the top)
     unsigned char stackPointer = 0;
-    // Most recent opcode
-    unsigned short currentOpcode;
-    //SDL Window
-    SDL_Window *window;
-    SDL_Renderer *renderer;
+    // If chip8 is paused by gui
+    bool paused = true;
+    // If chip8 is paused for key press
+    bool pausedForKeyPress = false;
 
 public:
+    // CHIP-8 keys on original system
+    const unsigned char chip8Keys[16] = {
+        '1', '2', '3', 'C',
+        '4', '5', '6', 'D',
+        '7', '8', '9', 'E',
+        'A', '0', 'B', 'F'
+    };
+
+    // Reverse bindings: index i corresponds to the location of character 'i' in chip8Keys
+    const unsigned char inverseChip8Keys[16] = {
+        13, 0, 1, 2, 
+        4, 5, 6, 8, 
+        9, 10, 12, 14, 
+        3, 7, 11, 15
+    };
     // Custom error to handle problems occurring during initialization of Chip 8
     class InitializationError : public std::exception {
     private:
@@ -89,14 +111,34 @@ public:
 
 
     /*
-    Updates key inputs from user
+    Updates key inputs from user; saves key press to register at registerIndex if paused
     */
-    void setKeys();
+    void setKeys(int registerIndex);
+
+    /* 
+    Updates delay and sound timers
+    */
+    void updateTimers();
 
     /*
     Clears the screen, coloring all pixels black
     */
     void clearScreen();
+
+    /*
+    Check if Chip-8 is paused
+    */
+    bool isPaused();
+
+    /*
+    Toggle CHIP-8 paused state
+    */
+    void togglePaused();
+
+    /*
+    Check if CHIP-8 paused for key press
+    */
+    bool isPausedForKeyPress();
 
     /*
     Getters for all state variables
@@ -111,7 +153,6 @@ public:
     unsigned short getIndex();
     unsigned short getProgramCounter();
     unsigned char getStackPointer();
-    unsigned short getCurrentOpcode();
 };
 
 #endif

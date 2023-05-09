@@ -54,14 +54,14 @@ GUI::~GUI() {
     SDL_Quit();
 }
 
-void GUI::renderGUI() {
+void GUI::renderGUI(float &clockSpeed) {
     // Start the Dear ImGui frame
     ImGui_ImplSDLRenderer_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
     // Create widgets
-    createWidgets();
+    createWidgets(clockSpeed);
 
     // Render
     ImGui::Render();
@@ -72,7 +72,7 @@ void GUI::renderGUI() {
     SDL_RenderPresent(renderer);
 }
 
-inline void GUI::createWidgets() {
+inline void GUI::createWidgets(float &clockSpeed) {
     const int WINDOW_WIDTH = io->DisplaySize.x;
     const int WINDOW_HEIGHT = io->DisplaySize.y;
 
@@ -80,8 +80,8 @@ inline void GUI::createWidgets() {
     const int INFO_WIDTH = 9 * WINDOW_WIDTH / 32;
     const int CPU_STATE_HEIGHT = WINDOW_HEIGHT / 3;
 
-    const int DISPLAY_WIDTH = WINDOW_WIDTH - INFO_WIDTH;
-    const int DISPLAY_HEIGHT = (WINDOW_WIDTH - INFO_WIDTH) / 2;
+    const int DISPLAY_HEIGHT = (WINDOW_WIDTH - INFO_WIDTH - STACK_WIDTH) / 2;
+    const int DISPLAY_WIDTH = 2 * DISPLAY_HEIGHT;
 
     const int GENERAL_WIDTH = 7 * DISPLAY_WIDTH / 10;
 
@@ -108,7 +108,7 @@ inline void GUI::createWidgets() {
                 // Draw arrow on topmost stack element
                 if (i == chip8->getStackPointer() - 1) {
                     ImGui::SameLine();
-                    ImGui::Text(" <--");
+                    ImGui::Text(" <");
                 }
             }
             ImGui::End();
@@ -197,7 +197,9 @@ inline void GUI::createWidgets() {
             ImGui::Text("OP:");
             ImGui::SameLine();
             ImGui::PopStyleColor();
-            ImGui::Text("0x%X", chip8->getCurrentOpcode());
+            unsigned short currentOpcode = chip8->getMemory(chip8->getProgramCounter()) << 8 | 
+                                           chip8->getMemory(1 + chip8->getProgramCounter());
+            ImGui::Text("0x%X", currentOpcode);
 
             ImGui::End();
         }
@@ -214,7 +216,6 @@ inline void GUI::createWidgets() {
                 // Color memory address green if programCounter is on it
                 if (i == chip8->getProgramCounter()) {
                     ImGui::PushStyleColor(ImGuiCol_Text, GREEN_COLOR);
-                    std::cout << i << std::endl;
                 }
                 // Color memory address yellow if index is on it
                 else if (i == chip8->getIndex()) {
@@ -250,7 +251,7 @@ inline void GUI::createWidgets() {
     ImGui::SetNextWindowSize(ImVec2(DISPLAY_WIDTH, DISPLAY_HEIGHT));      
     {
         bool displayOpen = true;
-        ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar;
         if (ImGui::Begin("Display", &displayOpen, flags)) {
             const int SCALE = DISPLAY_WIDTH / 64;
 
@@ -282,27 +283,83 @@ inline void GUI::createWidgets() {
         bool displayOpen = true;
         ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
         if (ImGui::Begin("General", &displayOpen, flags)) {
+            ImGui::PushStyleColor(ImGuiCol_Text, TEXT_LABEL_COLOR);
+            ImGui::Text("Clock");
+            ImGui::PopStyleColor();
             // Pause button
-            if (ImGui::Button(paused ? "Resume" : "Pause")) {
-                paused = !paused;
+            if (ImGui::Button(chip8->isPaused() ? "Resume" : "Pause")) {
+                chip8->togglePaused();
             }
             // Forward One Cycle Button
             if (ImGui::Button("Tick")) {
                 forwardOneCycle();
             }
+            // Clock speed
+            ImGui::PushStyleColor(ImGuiCol_Text, TEXT_LABEL_COLOR);
+            ImGui::Text("Clock Speed:");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::SliderFloat("float", &clockSpeed, 1.0, 1000.0);
+            ImGui::SameLine();
+            ImGui::Text("Hz");
+            // FPS
+            ImGui::PushStyleColor(ImGuiCol_Text, TEXT_LABEL_COLOR);
+            ImGui::Text("FPS:");
+            ImGui::PopStyleColor();
+            ImGui::SameLine();
+            ImGui::Text("%.2f", io->Framerate);
 
             ImGui::End();
         }
     }
 
+    // Keypad
+    ImGui::SetNextWindowPos(ImVec2(STACK_WIDTH + INFO_WIDTH + GENERAL_WIDTH, DISPLAY_HEIGHT));
+    ImGui::SetNextWindowSize(ImVec2(DISPLAY_WIDTH - GENERAL_WIDTH, WINDOW_HEIGHT - DISPLAY_HEIGHT));      
+    {
+        bool displayOpen = true;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize;
+        if (ImGui::Begin("Keypad", &displayOpen, flags)) {
+            std::string text = 
+                "1  2  3  C\n"
+                "4  5  6  D\n"
+                "7  8  9  E\n"
+                "A  0  B  F";
+
+            float textWidth = ImGui::CalcTextSize(text.c_str()).x;
+            float textHeight = ImGui::CalcTextSize(text.c_str()).y;
+
+            ImGui::SetCursorPosX(((DISPLAY_WIDTH - GENERAL_WIDTH) - textWidth) * 0.5f);
+            ImGui::SetCursorPosY(((WINDOW_HEIGHT - DISPLAY_HEIGHT) - textHeight) * 0.5f);
+
+            for (int i = 0; i < 16; i++) {
+                // Push color if key pressed
+                if (chip8->getKey(i)) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, GREEN_COLOR);  
+                }
+                // If character is not last char in line
+                if (i % 4 != 3) {
+                    ImGui::Text("%c ", chip8->chip8Keys[i]);
+                    ImGui::SameLine();
+                }
+                // If character is last char in line
+                else {
+                    ImGui::Text("%c", chip8->chip8Keys[i]);
+                    ImGui::Text("");
+                    ImGui::SetCursorPosX(((DISPLAY_WIDTH - GENERAL_WIDTH) - textWidth) * 0.5f);
+                }
+                // Pop color if key was pressed
+                if (chip8->getKey(i)) {
+                    ImGui::PopStyleColor();  
+                }
+            }
+            ImGui::End();
+        }
+    }
 }
 
 int GUI::getWindowID() {
     return SDL_GetWindowID(window);
-}
-
-bool GUI::isPaused() {
-    return paused;
 }
 
 void GUI::forwardOneCycle() {

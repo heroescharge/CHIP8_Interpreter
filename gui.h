@@ -15,11 +15,10 @@ private:
     SDL_Renderer *renderer;
     ImGuiIO *io;
 
-    bool paused = true;
     /*
     Creates widgets on GUI
     */
-    void createWidgets();
+    void createWidgets(float &clockSpeed);
 
 public:
     GUI(Chip8 *chip8);
@@ -28,17 +27,12 @@ public:
     /*
     Updates GUI using state of CHIP 8
     */
-    void renderGUI();
+    void renderGUI(float &clockSpeed);
 
     /*
     Get numerical id of SDL window
     */
     int getWindowID();
-
-    /*
-    Check if GUI is paused
-    */
-    bool isPaused();
 
     /*
     Forwards Chip 8 by one emulation cycle
