@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
         auto lastTimersTime = lastCycleTime;
         while (true){
             float cycleDuration = (1  / clockSpeed) * 1e3; // Duration of a cycle
-
+            
             // Check if user quits out of window
             if (SDL_PollEvent(&e) == 1 && e.type == SDL_QUIT){
                 return EXIT_SUCCESS;
@@ -41,16 +41,15 @@ int main(int argc, char **argv) {
             // Run next emulation cycle
             if (dtCycle > cycleDuration && !chip8.isPaused()) {
                 lastCycleTime = currentTime;
-
                 chip8.emulateCycle();
             }
             // Decrement timers
             if (dtTimer > timersCycleDuration && !chip8.isPaused()) {
                 lastTimersTime = currentTime;
                 chip8.updateTimers();
-            }
+            }  
             
-            gui.renderGUI(clockSpeed); // Pass clockSpeed by reference so that GUI can display it
+            gui.renderGUI(clockSpeed); // Pass clockSpeed by reference so that GUI can display it          
         }
     } catch(std::exception& e) {
         std::cout << e.what() << std::endl;
