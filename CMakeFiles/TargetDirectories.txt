@@ -1,0 +1,4 @@
+/Users/ishirgarg/Documents/GitHub/CHIP8_Interpreter/CMakeFiles/chip8.dir
+/Users/ishirgarg/Documents/GitHub/CHIP8_Interpreter/CMakeFiles/ImGui.dir
+/Users/ishirgarg/Documents/GitHub/CHIP8_Interpreter/CMakeFiles/edit_cache.dir
+/Users/ishirgarg/Documents/GitHub/CHIP8_Interpreter/CMakeFiles/rebuild_cache.dir

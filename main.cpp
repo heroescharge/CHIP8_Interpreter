@@ -10,11 +10,15 @@ Emulates Chip 8 system and runs the ROM located at the provided file path
 
 int main(int argc, char **argv) {
     try{
+        if (argc != 2) {
+            throw std::invalid_argument("Invalid number of arguments");
+        }
+
         Chip8 chip8;
         GUI gui(&chip8);
 
         chip8.initializeInput();
-        chip8.loadGame("roms/pong.rom");
+        chip8.loadGame(argv[1]);
 
         const float timersCycleDuration = 1000 / 60; // 60 Hz timers
         float clockSpeed = 500; // Clock speed in Hertz
